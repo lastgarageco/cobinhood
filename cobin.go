@@ -80,6 +80,9 @@ func main() {
 	placedOrder := cobinhoodPlaceOrderResult{}
 	requestCobinhood("POST", "https://api.cobinhood.com/v1/trading/orders", bytes.NewReader(orderJSON), &placedOrder)
 
+	//Need to wait a bit
+	time.Sleep(time.Second * 5)
+
 	openOrders := cobinhoodOrders{}
 	requestCobinhood("GET", "https://api.cobinhood.com/v1/trading/orders", nil, &openOrders)
 
@@ -109,8 +112,7 @@ func main() {
 				delete(myOrders, id)
 			}
 		}
-		duration := time.Second * 5
-		time.Sleep(duration)
+		time.Sleep(time.Second * 5)
 		if len(myOrders) == 0 {
 			keepChecking = false
 		}
