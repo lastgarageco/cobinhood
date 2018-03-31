@@ -9,8 +9,6 @@ import (
 const mycobinhoodAuth = `GET YOUR API KEY FROM YOUR COBINHOOD ACCOUNT`
 
 func main() {
-	//This all new code, the rest remove it when done
-
 	//First set your API Key
 	ch := new(cobinhoodgo.Cobin)
 	ch.SetAPIKey(mycobinhoodAuth)
