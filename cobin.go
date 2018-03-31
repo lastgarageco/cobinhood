@@ -1,121 +1,63 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"log"
-	"net/http"
-	"strconv"
-	"time"
+
+	"github.com/cobinhoodGo"
 )
 
-const mycobinhoodAuth = `GET YOUR API KEY FROM COBINHOOD ACCOUNT`
-
-func requestCobinhood(postType string, apiURL string, body io.Reader, target interface{}) error {
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest(postType, apiURL, body)
-	req.Header.Add("Authorization", mycobinhoodAuth)
-	req.Header.Add("nonce", strconv.FormatInt(time.Now().UnixNano()/1000000, 10))
-
-	resp, err := client.Do(req)
-
-	if err != nil {
-		fmt.Println(err)
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	return json.NewDecoder(resp.Body).Decode(target)
-}
+const mycobinhoodAuth = `GET YOUR API KEY FROM YOUR COBINHOOD ACCOUNT`
 
 func main() {
-	myWallet := make(map[string]float64)
-	myOrders := make(map[string]string)
-	var myAskPrice float64
-	var myBidPrice float64
+	//This all new code, the rest remove it when done
 
-	myWalletBalances := cobinhoodWallet{}
-	requestCobinhood("GET", "https://api.cobinhood.com/v1/wallet/balances", nil, &myWalletBalances)
+	//First set your API Key
+	ch := new(cobinhoodgo.Cobin)
+	ch.SetAPIKey(mycobinhoodAuth)
 
-	for i := range myWalletBalances.Result.Balances {
-		total, _ := strconv.ParseFloat(myWalletBalances.Result.Balances[i].Total, 64)
-		onOrder, _ := strconv.ParseFloat(myWalletBalances.Result.Balances[i].OnOrder, 64)
-		myWallet[myWalletBalances.Result.Balances[i].Currency] = total - onOrder
+	//How to get your wallet
+	wallet, err := cobinhoodgo.GetWallet(*ch)
+	if err != nil {
+		fmt.Println(err)
 	}
+	fmt.Println(wallet)
 
-	cobinhoodTickerCOBBTC := cobinhoodTicker{}
-	requestCobinhood("GET", "https://api.cobinhood.com/v1/market/tickers/COB-BTC", nil, &cobinhoodTickerCOBBTC)
-
-	lowestAsk, _ := strconv.ParseFloat(cobinhoodTickerCOBBTC.Result.Ticker.LowestAsk, 64)
-	highestBid, _ := strconv.ParseFloat(cobinhoodTickerCOBBTC.Result.Ticker.HighestBid, 64)
-
-	if (lowestAsk - highestBid) >= 0.00000025 {
-		myAskPrice = lowestAsk - 0.00000001
-		myBidPrice = myAskPrice - 0.00000020
-	} else {
-		myAskPrice = lowestAsk + 0.00000020
-		myBidPrice = myAskPrice - 0.00000020
+	//How to get Ticker data
+	tickersIwant := [2]string{"COB-BTC", "TRX-BTC"}
+	tickers, err := cobinhoodgo.GetTicker(*ch, tickersIwant[0:2])
+	if err != nil {
+		fmt.Println(err)
 	}
+	fmt.Println(tickers)
 
-	askOrder := &cobinhoodPlaceOrder{
-		TradingPairID: "COB-BTC",
-		Side:          "ask",
-		Type:          "limit",
-		Price:         strconv.FormatFloat(myAskPrice, 'f', 8, 64),
-		Size:          strconv.FormatFloat(myWallet["COB"], 'f', 4, 64),
+	//How to get all Open Orders
+	myOrders, err := cobinhoodgo.GetOpenOrders(*ch)
+	if err != nil {
+		fmt.Println(err)
 	}
+	fmt.Println(myOrders)
 
-	bidOrder := &cobinhoodPlaceOrder{
-		TradingPairID: "COB-BTC",
-		Side:          "bid",
-		Type:          "limit",
-		Price:         strconv.FormatFloat(myBidPrice, 'f', 8, 64),
-		Size:          strconv.FormatFloat(myWallet["COB"], 'f', 4, 64),
-	}
-
-	orderJSON, _ := json.Marshal(askOrder)
-
-	placedOrder := cobinhoodPlaceOrderResult{}
-	requestCobinhood("POST", "https://api.cobinhood.com/v1/trading/orders", bytes.NewReader(orderJSON), &placedOrder)
-
-	//Need to wait a bit
-	time.Sleep(time.Second * 5)
-
-	openOrders := cobinhoodOrders{}
-	requestCobinhood("GET", "https://api.cobinhood.com/v1/trading/orders", nil, &openOrders)
-
-	for i := range openOrders.Result.Orders {
-		myOrders[openOrders.Result.Orders[i].ID] = openOrders.Result.Orders[i].Side
-	}
-
-	keepChecking := true
-	for keepChecking {
-		for id, side := range myOrders {
-			fmt.Println("cheking status of order: " + id + "-" + side)
-			orderStatus := cobinhoodOrder{}
-			orderstatusURL := "https://api.cobinhood.com/v1/trading/orders/" + id
-
-			requestCobinhood("GET", orderstatusURL, nil, &orderStatus)
-
-			switch orderStatus.Result.Order.State {
-			case "filled":
-				if side == "ask" {
-					orderJSON, _ = json.Marshal(bidOrder)
-					placedOrder = cobinhoodPlaceOrderResult{}
-					requestCobinhood("POST", "https://api.cobinhood.com/v1/trading/orders", bytes.NewReader(orderJSON), &placedOrder)
-					myOrders[placedOrder.Result.Order.ID] = placedOrder.Result.Order.Side
-				}
-				delete(myOrders, id)
-			case "cancelled":
-				delete(myOrders, id)
-			}
+	//How to check status of an Order
+	for i := range myOrders {
+		myOrderStatus, err := cobinhoodgo.GetOrderStatus(*ch, myOrders[i].ID)
+		if err != nil {
+			fmt.Println(err)
 		}
-		time.Sleep(time.Second * 5)
-		if len(myOrders) == 0 {
-			keepChecking = false
-		}
+		fmt.Println(myOrderStatus.ID + " " + myOrderStatus.State)
 	}
+
+	//How to place an Order
+	var newOrder cobinhoodgo.PlaceOrderData
+	newOrder.TradingPairID = "COB-BTC"
+	newOrder.Side = "ask"
+	newOrder.Type = "limit"
+	newOrder.Price = 1
+	newOrder.Size = 435
+
+	myPlacedOrder, err := cobinhoodgo.PlaceOrder(*ch, newOrder)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(myPlacedOrder)
 
 }
