@@ -6,7 +6,7 @@ import (
 	"github.com/cobinhoodGo"
 )
 
-const mycobinhoodAuth = `GET YOUR API KEY FROM YOUR COBINHOOD ACCOUNT`
+const mycobinhoodAuth = `GET AND ENTER YOUR API KEY FROM YOUR COBINHOOD ACCOUNT`
 
 func main() {
 	//First set your API Key
@@ -21,8 +21,7 @@ func main() {
 	fmt.Println(wallet)
 
 	//How to get Ticker data
-	tickersIwant := [2]string{"COB-BTC", "TRX-BTC"}
-	tickers, err := cobinhoodgo.GetTicker(*ch, tickersIwant[0:2])
+	tickers, err := cobinhoodgo.GetTicker(*ch, "COB-BTC", "TRX-BTC")
 	if err != nil {
 		fmt.Println(err)
 	}
