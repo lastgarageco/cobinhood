@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/cobinhoodGo"
 )
@@ -46,9 +47,9 @@ func main() {
 	//How to place an Order
 	var newOrder cobinhoodgo.PlaceOrderData
 	newOrder.TradingPairID = "COB-BTC"
-	newOrder.Side = "ask"
+	newOrder.Side = "bid"
 	newOrder.Type = "limit"
-	newOrder.Price = 1
+	newOrder.Price = 0.00000500
 	newOrder.Size = 435
 
 	myPlacedOrder, err := cobinhoodgo.PlaceOrder(*ch, newOrder)
@@ -56,5 +57,13 @@ func main() {
 		fmt.Println(err)
 	}
 	fmt.Println(myPlacedOrder)
+
+	//How to cancel an Order
+	time.Sleep(5 * time.Second) //this time is not necessary is just to make a small pause after the order we just palced.
+	isCancel, err := cobinhoodgo.CancelOrder(*ch, myPlacedOrder.ID)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(isCancel)
 
 }
