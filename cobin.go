@@ -59,7 +59,7 @@ func main() {
 	fmt.Println(myPlacedOrder)
 
 	//How to cancel an Order
-	time.Sleep(5 * time.Second) //this time is not necessary is just to make a small pause after the order we just palced.
+	time.Sleep(5 * time.Second) //this time is not necessary is just to make a small pause after the order we just placed.
 	isCancel, err := cobinhoodgo.CancelOrder(*ch, myPlacedOrder.ID)
 	if err != nil {
 		fmt.Println(err)
